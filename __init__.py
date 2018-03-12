@@ -1,8 +1,8 @@
 '''
-Copyright (C) 2018 YOUR NAME
-YOUR@MAIL.com
+Copyright (C) 2018 Jean Da Costa Machado
+jean3dimensional@gmail.com
 
-Created by YOUR NAME
+Created by Jean Da Costa Machado
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
