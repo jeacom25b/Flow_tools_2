@@ -83,6 +83,19 @@ class SlashBoolean(bpy.types.Operator):
         default = False
     )
     
+    keep_objects = bpy.props.BoolProperty(
+        name = "Keep Objects",
+        description = "Delete or not the original objects.",
+        default = True
+    )
+    
+    cut_using_mesh = bpy.props.BoolProperty(
+        name = "Cut using active",
+        description = "Delete or not the original objects.",
+        default = False
+    )
+    
+    
     @classmethod
     def poll(cls, context):
         if context.active_object:
@@ -90,7 +103,7 @@ class SlashBoolean(bpy.types.Operator):
 
     def execute(self, context):
         
-        if context.scene.grease_pencil:
+        if context.scene.grease_pencil and not self.cut_using_mesh:
             cutter_data = bpy.data.meshes.new("Cutter_mesh")
             cutter_object = bpy.data.objects.new("cutter", cutter_data)
             
@@ -111,8 +124,8 @@ class SlashBoolean(bpy.types.Operator):
             md_bool.object = cutter_object
             bpy.ops.object.modifier_apply(modifier = md_bool.name)
             
-            bpy.data.objects.remove(cutter_object)
             bpy.data.meshes.remove(cutter_data)
+            bpy.data.objects.remove(cutter_object)
             
             bpy.ops.object.mode_set(mode = "EDIT")
             bpy.ops.mesh.select_all(action = "SELECT")
@@ -121,6 +134,31 @@ class SlashBoolean(bpy.types.Operator):
             
             context.scene.grease_pencil.layers.active.active_frame.strokes.remove(stroke_messer.stroke)
             
+        if self.cut_using_mesh:
+            
+            cutter_object = context.active_object
+            cuttends = [ob for ob in context.selected_objects if not ob == cutter_object and ob.type == "MESH"]
+            
+            md_sldf = cutter_object.modifiers.new(type = "SOLIDIFY", name = "thin_solid")
+            md_sldf.offset = 0.0
+            md_sldf.thickness = self.cut_thickness
+            
+            for ob in cuttends:
+                
+                md_bool = ob.modifiers.new(type = "BOOLEAN", name = "cut")
+                md_bool.operation = "DIFFERENCE"
+                md_bool.solver = self.boolean_solver
+                md_bool.object = cutter_object
+                context.scene.objects.active = ob
+                bpy.ops.object.modifier_apply(modifier = md_bool.name)
+                bpy.ops.object.mode_set(mode = "EDIT")
+                bpy.ops.mesh.separate(type = "LOOSE")
+                bpy.ops.object.mode_set(mode = "OBJECT")
+            
+            if not self.keep_objects:
+                bpy.data.meshes.remove(cutter_object.data)
+                bpy.data.objects.remove(cutter_object)
+                
         return {"FINISHED"}
         
 
@@ -140,7 +178,7 @@ class MultiObjectBoolean(bpy.types.Operator):
         ]
     )
     keep_objects = bpy.props.BoolProperty(
-        name = "keep_objects",
+        name = "Keep Objects",
         description = "Delete or not the original objects.",
         default = True
     )
@@ -166,9 +204,9 @@ class MultiObjectBoolean(bpy.types.Operator):
             bpy.ops.object.modifier_apply(modifier = md.name)
             if self.keep_objects:
                 ob_data = mesh.data
-                bpy.data.objects.remove(mesh)
                 bpy.data.meshes.remove(ob_data)
-      
+                bpy.data.objects.remove(mesh)
+            
         
         return {"FINISHED"}
         

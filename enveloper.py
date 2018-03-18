@@ -12,10 +12,11 @@ class ArmatureMesser:
         else:
             self.armature = armature
     
-    def convert(self, step_size = 0.1, min_step_num = 10, stiffness = 2, resolution = 0.2, radius_multiplier = 1.5):
+    def convert(self, step_size = 0.1, min_step_num = 10, resolution = 0.2, radius_multiplier = 1.5):
         
         bpy.ops.object.metaball_add(type = "BALL", location = Vector((0, 0, 0)))
         meta = bpy.context.active_object.data
+        meta.threshold = 0.00000000001
         meta.elements.remove(meta.elements[0])
         
         for bone in self.armature.data.bones:
@@ -28,7 +29,7 @@ class ArmatureMesser:
             
             total_steps = int(bone.length / current_step_size)
             
-            for i in range(total_steps):
+            for i in range(total_steps + 1):
                 
                 factor = (1 / total_steps) * i
                 
@@ -39,9 +40,7 @@ class ArmatureMesser:
                 
                 element = meta.elements.new()
                 element.co = ball_location
-                element.radius = ball_radius * radius_multiplier
-                element.stiffness = stiffness
-                
+                element.radius = ball_radius * radius_multiplier        
 
         bpy.context.active_object.data.resolution = resolution
                 
@@ -63,13 +62,13 @@ class ConvertEnvelopeToMesh(bpy.types.Operator):
     resolution = bpy.props.FloatProperty(
         name = "Resolution",
         description = "The metaball resolution",
-        default = 0.05
+        default = 100
     )
     
     step_size = bpy.props.FloatProperty(
         name = "Step Size",
         description = "The amount of spacing between each sample.",
-        default = 0.05,
+        default = 0.02,
         min = 0.01
     )
     
@@ -77,12 +76,6 @@ class ConvertEnvelopeToMesh(bpy.types.Operator):
         name = "Minimun steps",
         description = "The minimus amount od steps per bone.",
         default = 10
-    )
-    
-    stiffness = bpy.props.FloatProperty(
-        name = "Metaball stiffness",
-        description  = "The stiffness of the metaball samples",
-        default = 10000
     )
     
     radius_multiplier = bpy.props.FloatProperty(
@@ -104,7 +97,7 @@ class ConvertEnvelopeToMesh(bpy.types.Operator):
         
         armature = context.active_object
         converter = ArmatureMesser(armature)
-        converter.convert(self.step_size, self.min_steps, self.stiffness, self.resolution, self.radius_multiplier)
+        converter.convert(self.step_size, self.min_steps, 1 / self.resolution, self.radius_multiplier)
         
         if self.delete_original:
             bpy.data.armatures.remove(armature.data)
